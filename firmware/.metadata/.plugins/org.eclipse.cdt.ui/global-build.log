@@ -1,0 +1,27 @@
+3218e9e8b9f2: Verifying Checksum
+3218e9e8b9f2: Download complete
+3218e9e8b9f2: Pull complete
+12da4b857fcb: Pull complete
+Digest: sha256:4bceb86200fcfa7a09b6ad122269d57c2707f9bb82c135854ff381413b5a4c51
+Status: Downloaded newer image for microros/micro_ros_static_library_builder:humble
+docker.io/microros/micro_ros_static_library_builder:humble
+[sudo] password for b: [sudo] password for b: dos2unix: /project/micro_ros_stm32cubemx_utils/microros_static_library_ide/library_generation/library_generation.sh: No such file or directory
+dos2unix: Skipping /project/micro_ros_stm32cubemx_utils/microros_static_library_ide/library_generation/library_generation.sh, not a regular file.
+make[1]: *** [makefile:91: pre-build] Error 2
+make: *** [makefile:64: all] Error 2
+"make -j12 all" terminated with exit code 2. Build might be incomplete.
+
+14:26:18 Build Failed. 2 errors, 0 warnings. (took 25m:39s.259ms)
+
+14:26:18 **** Incremental Build of configuration Debug for project solar_uros ****
+make -j12 all 
+echo "1" | sudo -S docker pull microros/micro_ros_static_library_builder:humble && echo "1" | sudo -S docker run --rm -v /home/b/Downloads/solar_cleaner/firmware/solar_uros:/project --env MICROROS_LIBRARY_FOLDER=micro_ros_stm32cubemx_utils/microros_static_library_ide microros/micro_ros_static_library_builder:humble
+humble: Pulling from microros/micro_ros_static_library_builder
+Digest: sha256:4bceb86200fcfa7a09b6ad122269d57c2707f9bb82c135854ff381413b5a4c51
+Status: Image is up to date for microros/micro_ros_static_library_builder:humble
+docker.io/microros/micro_ros_static_library_builder:humble
+[sudo] password for b: dos2unix: /project/micro_ros_stm32cubemx_utils/microros_static_library_ide/library_generation/library_generation.sh: No such file or directory
+dos2unix: Skipping /project/micro_ros_stm32cubemx_utils/microros_static_library_ide/library_generation/library_generation.sh, not a regular file.
+make[1]: *** [makefile:91: pre-build] Error 2
+make: *** [makefile:64: all] Error 2
+"make -j12 all" terminated with exit code 2. Build might be incomplete.
