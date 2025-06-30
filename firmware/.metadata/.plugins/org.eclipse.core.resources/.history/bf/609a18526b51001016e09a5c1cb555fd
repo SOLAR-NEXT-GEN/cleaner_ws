@@ -1,0 +1,18 @@
+/*
+ * config.c
+ *
+ *  Created on: Jun 25, 2025
+ *      Author: b
+ */
+
+#include <config.h>
+
+MDXX motor1;
+MDXX motor2;
+MDXX motor3;
+MDXX motor4;
+
+PID_CONTROLLER pid1;
+PID_CONTROLLER pid2;
+PID_CONTROLLER pid3;
+PID_CONTROLLER pid4;
