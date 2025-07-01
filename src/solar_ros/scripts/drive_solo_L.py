@@ -14,7 +14,7 @@ class SoloLNode(Node):
         super().__init__('solo_node_L')
         self.initial_solo()
         self.create_timer(0.01, self.solo_loop)
-        self.create_subscription(Int32,"/stop",self.stop_callback,10)
+        self.create_subscription(Int32,"/mode",self.mode_callback,10)
         self.publisher_feedback = self.create_publisher(Float32MultiArray, "/feedback_odr_L", 10)
         self.publisher_L = self.create_publisher(Float32MultiArray, "/lidar_state", 10)
         self.create_subscription(Float32MultiArray, "/cmd_vel", self.velo_callback, 10)
@@ -25,7 +25,7 @@ class SoloLNode(Node):
         self.start = 0
         self.feedback_L = 0.0
         self.feedback_R = 0.0
-        self.stop = 0
+        self.mode = 0
         
     def initial_solo(self):
         pwmFrequency = 40
@@ -110,9 +110,9 @@ class SoloLNode(Node):
         solo_drive.set_speed_controller_ki(speedControllerKi)
         solo_drive.set_sensorless_transition_speed(500)
 
-    def stop_callback(self,msg:Int32):
-        self.stop = msg.data
-        print(self.stop)
+    def mode_callback(self,msg:Int32):
+        self.mode = msg.data
+        print(self.mode)
 
     def solo_loop(self):
         error_value_L, error_type_L = self.solo_L.get_error_register()
@@ -152,7 +152,7 @@ class SoloLNode(Node):
             self.publisher_L.publish(L_msg)
 
     def velo_callback(self, msg:Float32MultiArray):
-        if self.stop == 0:
+        if self.mode == 0:
             self.solo_L.set_speed_reference(0)
             print(f"set speed to {0}")
             return

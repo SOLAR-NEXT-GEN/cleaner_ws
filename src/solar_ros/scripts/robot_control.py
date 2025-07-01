@@ -18,8 +18,6 @@ class ControllerNode(Node):
         self.brush_publisher = self.create_publisher(Int32, '/cubemx_publisher_Brush', 10)
 
         self.cmd_vel = [0.0, 0.0]
-        self.servo = 1
-        self.brush = 2
 
     def timer_callback(self):
         speed_l = Float32()

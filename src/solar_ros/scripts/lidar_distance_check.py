@@ -16,24 +16,19 @@ class LidarReadNode(Node):
         self.f_edge_pos_publisher = self.create_publisher(PointCloud, '/front/edge_pos', 10)
         self.b_lim_pos_publisher = self.create_publisher(LaserScan, '/back/scan2', 10)
         self.b_edge_pos_publisher = self.create_publisher(PointCloud, '/back/edge_pos', 10)
-        self.brush_publisher = self.create_publisher(Int32, '/cubemx_publisher_servo', 10)
         self.cmd_vel_publisher = self.create_publisher(Float32MultiArray, '/cmd_vel', 10)
-        self.brush1_publisher = self.create_publisher(Int32, '/cubemx_sub_encoder1', 10)
-        self.brush2_publisher = self.create_publisher(Int32, '/cubemx_sub_encoder2', 10)
 
-        #subscription
+        # subscription
         self.create_subscription(LaserScan, "/front/scan", self.front_lidar_callback, 10)
         self.create_subscription(LaserScan, "/back/scan", self.back_lidar_callback, 10)
         self.create_subscription(Float32MultiArray, "/lidar_state", self.state_callback, 10)
-        self.create_subscription(Int32, "/cubemx_publisher_encoder1", self.encoder1_callback, 10)
-        self.create_subscription(Int32, "/cubemx_publisher_encoder2", self.encoder2_callback, 10)
 
         self.create_timer(0.01, self.timer_callback)
 
-        #variable
-        self.lidar_distance = 0.32 #ระยะห่างระหว่าง LiDAR
+        # variable
+        self.lidar_distance = 0.32 # ระยะห่างระหว่าง LiDAR
         self.max_speed = 0.2
-        self.direction = 1 #ทิศการเดิน
+        self.direction = 1 # ทิศการเดิน
         self.deg = [270, 90]
         self.lidar_error = 0.032
         self.isActive = 0
@@ -48,7 +43,6 @@ class LidarReadNode(Node):
         self.start_position = [0, 0]
         self.f_dy = [0, 0]
         self.b_dy = [0, 0]
-        self.current_encoder = [0, 0]
 
     def timer_callback(self):
         if self.isActive:
@@ -63,22 +57,6 @@ class LidarReadNode(Node):
         #     cmd_msg = Float32MultiArray()
         #     cmd_msg.data = [0.0, 0.0]
         #     self.cmd_vel_publisher.publish(cmd_msg)
-
-    def encoder1_callback(self, msg:Int32):
-        self.current_encoder[0] = msg.data
-
-    def encoder2_callback(self, msg:Int32):
-        self.current_encoder[2] = msg.data
-
-    def pub_brush_target(self):
-        # publish brush target
-        target_position = [min(self.f_dy[0], self.b_dy[0]), min(self.f_dy[1], self.b_dy[1])]
-        brush_msg1 = Int32()
-        brush_msg1.data = target_position[0] - self.start_position[0]
-        brush_msg2 = Int32()
-        brush_msg2.data = target_position[1] - self.start_position[1]
-        self.brush1_publisher.publish(brush_msg1)
-        self.brush2_publisher.publish(brush_msg2)
 
     def publish_lidar_data(self, msg:LaserScan, deg, lim_deg, side):
         scan = msg
@@ -119,7 +97,6 @@ class LidarReadNode(Node):
             dy.append(round(np.cos(np.deg2rad(i*0.5))*msg[i],5))
 
         return stack_pos, dx, dy
-        
         
     def lim_deg_pos(self, first, last, stack_pos, dx, dy):
         lim_deg = []
@@ -269,7 +246,6 @@ class LidarReadNode(Node):
         self.cmd_vel_publisher.publish(msg)
         self.get_logger().info(f'Publishing speed data =  {msg.data}')
         # self.pub_brush_target()
-
 
 def main(args=None):
     rclpy.init(args=args)

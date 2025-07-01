@@ -8,7 +8,6 @@ from std_msgs.msg import Float32MultiArray
 import SoloPy as solo
 import time
 
-
 class SoloNode(Node):
     def __init__(self):
         super().__init__('solo_node')
