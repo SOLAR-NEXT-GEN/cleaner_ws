@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "HX711.h"
+#include <math.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,7 +47,8 @@
 UART_HandleTypeDef hlpuart1;
 
 /* USER CODE BEGIN PV */
-hx711_t scale;
+hx711_t LOAD1, LOAD2;
+float mass1,mass2;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,37 +60,7 @@ static void MX_LPUART1_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void init_weight(hx711_t *hx711){
-    char buffer[128];
 
-    sprintf(buffer,"HX711 initialization\r\n");
-    HAL_UART_Transmit(&hlpuart1, (uint8_t *)buffer, strlen(buffer), HAL_MAX_DELAY);
-
-    /* Initialize the hx711 sensor on PA1=DOUT, PA0=SCK */
-    hx711_init(hx711, GPIOA, GPIO_PIN_0, GPIOA, GPIO_PIN_1);
-
-    /* Configure gain for channel A (128) and B (32) */
-    set_gain(hx711, 128, 32);
-
-    /* Set HX711 scaling factors (you must calibrate these) */
-    set_scale(hx711, 107.f, 1.0f);
-
-    /* Tare both channels with 10 readings */
-    tare_all(hx711, 10);
-
-    sprintf(buffer,"HX711 module has been initialized\r\n");
-    HAL_UART_Transmit(&hlpuart1, (uint8_t *)buffer, strlen(buffer), HAL_MAX_DELAY);
-}
-
-float measure_weight(hx711_t hx711, hx711_t hx711b){
-    long weightA = get_weight(&hx711, 1, CHANNEL_A);
-    if (weightA < 0) weightA = abs(weightA);
-
-    long weightB = get_weight(&hx711b, 1, CHANNEL_B);
-    if (weightB < 0) weightB = 0;
-
-    return (float)weightA;
-}
 /* USER CODE END 0 */
 
 /**
@@ -122,24 +94,56 @@ int main(void)
   MX_GPIO_Init();
   MX_LPUART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  init_weight(&scale);
+  HX711_Init   (&LOAD1, GPIOA, GPIO_PIN_0, GPIOA, GPIO_PIN_1);
+   HX711_SetGain(&LOAD1, 128, 32);
+   HX711_SetScale(&LOAD1, 107.0f, 0.0f);
+   HX711_Tare(&LOAD1, 1, CHANNEL_A);
+
+   HX711_Init   (&LOAD2, GPIOA, GPIO_PIN_8, GPIOA, GPIO_PIN_9);
+   HX711_SetGain(&LOAD2, 128, 32);
+   HX711_SetScale(&LOAD2, 100.0f, 0.0f);
+   HX711_Tare(&LOAD2, 1, CHANNEL_A);
+   HAL_Delay(100);
+
+
+   // Debug: confirm init succeeded
+   {
+     char ready[] = ">> Init done, entering loop\r\n";
+     HAL_UART_Transmit(&hlpuart1, (uint8_t*)ready, strlen(ready), HAL_MAX_DELAY);
+   }
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+	float w1 = 0, w2 = 0;
+	char buf[80];
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  // Check if HX711 is ready to read
-	  float w = measure_weight(scale, scale);
-	        char msg[64];
-	        long grams = (long)w;                  // drop fractional part
-	        int len   = snprintf(msg, sizeof(msg),
-	                             "Weight: %ld g\r\n", grams);
-	        HAL_UART_Transmit(&hlpuart1,
-	                          (uint8_t*)msg, len, HAL_MAX_DELAY);
+	  if (HX711_GetUnitsNonBlocking(&LOAD1, CHANNEL_A, &w1) &&
+	            HX711_GetUnitsNonBlocking(&LOAD2, CHANNEL_A, &w2))
+	        {
+
+			long c1 = lroundf(w1 * 100.0f);
+			long g1 = c1 / 100;
+			long frac1 = c1 % 100;
+
+			long c2 = lroundf(w2 * 100.0f);
+			long g2 = c2 / 100;
+			long frac2 = c2 % 100;
+			mass1 = g1;
+			mass2 = g2;
+
+			int len = snprintf(buf, sizeof(buf),
+					"Load1: %ld.%02ld g, Load2: %ld.%02ld g\r\n", g1, frac1, g2,
+					frac2);
+	          HAL_UART_Transmit(&hlpuart1, (uint8_t*)buf, len, HAL_MAX_DELAY);
+	        }
+
+//	        HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }
@@ -256,7 +260,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0|LD2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0|LD2_Pin|GPIO_PIN_8, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
@@ -264,15 +268,15 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA0 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  /*Configure GPIO pins : PA0 PA8 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_8;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA1 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1;
+  /*Configure GPIO pins : PA1 PA9 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
