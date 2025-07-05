@@ -1,0 +1,7 @@
+../Core/Src/main.c:61:6:init_weight	1
+../Core/Src/main.c:83:7:measure_weight	3
+../Core/Src/main.c:98:5:main	1
+../Core/Src/main.c:151:6:SystemClock_Config	3
+../Core/Src/main.c:198:13:MX_LPUART1_UART_Init	5
+../Core/Src/main.c:245:13:MX_GPIO_Init	1
+../Core/Src/main.c:304:6:Error_Handler	1
