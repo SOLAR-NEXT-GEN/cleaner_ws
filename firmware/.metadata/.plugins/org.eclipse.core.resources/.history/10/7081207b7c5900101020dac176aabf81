@@ -1,0 +1,76 @@
+/*
+ * config.h
+ *
+ *  Created on: Jun 25, 2025
+ *      Author: b
+ */
+
+#ifndef INC_CONFIG_H_
+#define INC_CONFIG_H_
+
+#include "main.h"
+#include "tim.h"
+#include "gpio.h"
+#include <string.h>
+#include "math.h"
+#include "PWM.h"
+#include "Cytron_MDXX.h"
+#include "Controller.h"
+#include "HX711.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
+
+extern TIM_HandleTypeDef htim2; //For Control Loop
+#define CONTROL_TIM &htim2
+extern PID_CONTROLLER pid1;
+extern PID_CONTROLLER pid2;
+
+// move brush up-down
+// left motor
+extern TIM_HandleTypeDef htim3;
+extern MDXX motor1;
+#define MOTOR1_TIM &htim3
+#define MOTOR1_TIM_CH TIM_CHANNEL_2
+#define MOTOR1_GPIOx GPIOA
+#define MOTOR1_GPIO_Pin GPIO_PIN_10
+
+// right motor
+extern TIM_HandleTypeDef htim3;
+extern MDXX motor2;
+#define MOTOR2_TIM &htim3
+#define MOTOR2_TIM_CH TIM_CHANNEL_1
+#define MOTOR2_GPIOx GPIOA
+#define MOTOR2_GPIO_Pin GPIO_PIN_7
+
+// spin brush
+extern TIM_HandleTypeDef htim3;
+extern MDXX motor3;
+#define MOTOR3_TIM &htim3
+#define MOTOR3_TIM_CH TIM_CHANNEL_3
+#define MOTOR3_GPIOx GPIOC
+#define MOTOR3_GPIO_Pin GPIO_PIN_1
+
+// pump water
+extern TIM_HandleTypeDef htim3;
+extern MDXX motor4;
+#define MOTOR4_TIM &htim3
+#define MOTOR4_TIM_CH TIM_CHANNEL_4
+#define MOTOR4_GPIOx GPIOC
+#define MOTOR4_GPIO_Pin GPIO_PIN_1
+
+extern hx711_t loadcell1;
+#define LOADCELL1_GPIOx_CLK GPIOA
+#define LOADCELL1__GPIO_Pin_CLK GPIO_PIN_0
+#define LOADCELL1_GPIOx GPIOA
+#define LOADCELL1__GPIO_Pin GPIO_PIN_1
+
+extern hx711_t loadcell2;
+#define LOADCELL1_GPIOx_CLK GPIOA
+#define LOADCELL1__GPIO_Pin_CLK GPIO_PIN_0
+#define LOADCELL1_GPIOx GPIOA
+#define LOADCELL1__GPIO_Pin GPIO_PIN_1
+
+void cleaner_begin();
+
+#endif /* INC_CONFIG_H_ */

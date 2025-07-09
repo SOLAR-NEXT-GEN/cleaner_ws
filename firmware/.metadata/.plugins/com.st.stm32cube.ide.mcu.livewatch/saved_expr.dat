@@ -3,3 +3,12 @@ R_encoder
 cmd_R_encoder
 cmd_vel2
 cmd_spin
+L_loadcell
+R_loadcell
+c
+w1
+w2
+mass1
+mass2
+omron
+uwTick

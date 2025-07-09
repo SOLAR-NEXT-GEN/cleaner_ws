@@ -1,0 +1,151 @@
+/*
+ * HX711.c
+ *
+ *  Created on: July 5, 2025
+ *      Author: KATANA
+ */
+
+#include "HX711.h"
+
+// ————————————————————————————————————————————————————————————— Init & config —
+void HX711_GPIO_Init(hx711_t *hx, GPIO_TypeDef *clk_gpio, uint16_t clk_pin,
+		GPIO_TypeDef *dat_gpio, uint16_t dat_pin) {
+	hx->clk_gpio = clk_gpio;
+	hx->clk_pin = clk_pin;
+	hx->dat_gpio = dat_gpio;
+	hx->dat_pin = dat_pin;
+
+	GPIO_InitTypeDef gpio = { 0 };
+
+	// SCK as push-pull output
+	gpio.Mode = GPIO_MODE_OUTPUT_PP;
+	gpio.Pull = GPIO_NOPULL;
+	gpio.Speed = GPIO_SPEED_FREQ_HIGH;
+	gpio.Pin = clk_pin;
+	HAL_GPIO_Init(clk_gpio, &gpio);
+
+	// force SCK low so the chip isn’t stuck in power-down
+	HAL_GPIO_WritePin(clk_gpio, clk_pin, GPIO_PIN_RESET);
+
+	// DOUT as input pull-up
+	gpio.Mode = GPIO_MODE_INPUT;
+	gpio.Pull = GPIO_PULLUP;
+	gpio.Speed = GPIO_SPEED_FREQ_HIGH;
+	gpio.Pin = dat_pin;
+	HAL_GPIO_Init(dat_gpio, &gpio);
+}
+
+static long HX711_ReadAverage(hx711_t *hx, uint8_t times, uint8_t channel) {
+	long sum = 0;
+	for (uint8_t i = 0; i < times; i++) {
+		// wait until ready
+		while (!HX711_IsReady(hx)) {
+			HAL_Delay(0);
+		}
+		sum += HX711_ReadRaw(hx, channel);
+	}
+	return sum / times;
+}
+
+void HX711_SetGain(hx711_t *hx, uint8_t Again, uint8_t Bgain) {
+	hx->Again = (Again == 128 ? 1 : 3);
+	hx->Bgain = 2;  // we only use channel A
+}
+
+void HX711_SetScale(hx711_t *hx, float Ascale, float Bscale) {
+	hx->Ascale = Ascale;
+	hx->Bscale = Bscale;
+}
+
+void HX711_Tare(hx711_t *hx, uint8_t times, uint8_t channel) {
+	// dummy read to set channel/gain
+	HX711_ReadRaw(hx, channel);
+
+	long avg = HX711_ReadAverage(hx, times, channel);
+	if (channel == CHANNEL_A)
+		hx->Aoffset = avg;
+	else
+		hx->Boffset = avg;
+}
+
+/**
+ * @brief   Tare both channels, each averaged over 'times' samples.
+ */
+void HX711_TareAll(hx711_t *hx, uint8_t times) {
+	HX711_Tare(hx, times, CHANNEL_A);
+	HX711_Tare(hx, times, CHANNEL_B);
+}
+
+// ————————————————————————————————————————————————————————————— Low-level I/O —
+bool HX711_IsReady(hx711_t *hx) {
+	return (HAL_GPIO_ReadPin(hx->dat_gpio, hx->dat_pin) == GPIO_PIN_RESET);
+}
+
+static uint8_t shiftIn(hx711_t *hx) {
+	uint8_t value = 0;
+	for (uint8_t i = 0; i < 8; i++) {
+		HAL_GPIO_WritePin(hx->clk_gpio, hx->clk_pin, GPIO_PIN_SET);
+		uint8_t b = HAL_GPIO_ReadPin(hx->dat_gpio, hx->dat_pin);
+		value |= (b << (7 - i));
+		HAL_GPIO_WritePin(hx->clk_gpio, hx->clk_pin, GPIO_PIN_RESET);
+	}
+	return value;
+}
+
+long HX711_ReadRaw(hx711_t *hx, uint8_t channel) {
+	// *single* blocking check to see if data is ready
+	if (!HX711_IsReady(hx)) {
+		return 0;  // caller must verify ready before calling
+	}
+
+	// read 24 bits
+	uint8_t data[3];
+	data[0] = shiftIn(hx);
+	data[1] = shiftIn(hx);
+	data[2] = shiftIn(hx);
+
+	// pulse SCK further to select gain/channel again
+	uint8_t pulses = (channel == CHANNEL_A) ? hx->Again : hx->Bgain;
+	for (uint8_t i = 0; i < pulses; i++) {
+		HAL_GPIO_WritePin(hx->clk_gpio, hx->clk_pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(hx->clk_gpio, hx->clk_pin, GPIO_PIN_RESET);
+	}
+
+	// build signed 32-bit
+	uint32_t raw = ((data[0] & 0x80) ? 0xFF000000UL : 0)
+			| ((uint32_t) data[0] << 16) | ((uint32_t) data[1] << 8)
+			| (uint32_t) data[2];
+
+	return (long) raw;
+}
+
+// ————————————————————————————————————————————————————————————— Non-blocking APIs —
+bool HX711_GetRawNonBlocking(hx711_t *hx, uint8_t channel, long *raw) {
+	if (!HX711_IsReady(hx)) {
+		return false;
+	}
+	*raw = HX711_ReadRaw(hx, channel);
+	return true;
+}
+
+bool HX711_GetUnitsNonBlocking(hx711_t *hx, uint8_t channel, float *grams) {
+	long raw;
+	if (!HX711_GetRawNonBlocking(hx, channel, &raw)) {
+		return false;
+	}
+	long offset = (channel == CHANNEL_A ? hx->Aoffset : hx->Boffset);
+	float scale = (channel == CHANNEL_A ? hx->Ascale : hx->Bscale);
+	*grams = ((float) (raw - offset)) / scale;
+	return true;
+}
+
+//
+void HX711_Init(hx711_t *hx711, GPIO_TypeDef *GPIOx_CLK, uint16_t GPIO_Pin_CLK,
+		GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin, float factor) {
+
+	HX711_GPIO_Init(hx711, GPIOx_CLK, GPIO_Pin_CLK, GPIOx, GPIO_Pin);
+	HX711_SetGain(hx711, 128, 32);
+	HX711_SetScale(hx711, factor, 0.0f);
+	HX711_Tare(hx711, 1, CHANNEL_A);
+}
+

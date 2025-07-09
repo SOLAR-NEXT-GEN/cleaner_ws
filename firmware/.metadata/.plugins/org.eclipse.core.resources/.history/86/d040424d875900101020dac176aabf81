@@ -1,0 +1,49 @@
+/*
+ * HX711.h
+ *
+ *  Created on: July 5, 2025
+ *      Author: KATANA
+ */
+
+#ifndef APPLICATION_CORE_HX711_H_
+#define APPLICATION_CORE_HX711_H_
+
+#include "stdint.h"
+#include "stdbool.h"
+#include "main.h"
+
+
+#define CHANNEL_A 0
+#define CHANNEL_B 1
+
+typedef struct {
+    GPIO_TypeDef *clk_gpio;
+    uint16_t      clk_pin;
+    GPIO_TypeDef *dat_gpio;
+    uint16_t      dat_pin;
+    uint8_t  Again;
+    uint8_t  Bgain;
+    float    Ascale;
+    float    Bscale;
+    long     Aoffset;
+    long     Boffset;
+} hx711_t;
+
+// basic init / config
+void     HX711_Init                (hx711_t *hx,
+                                    GPIO_TypeDef *clk_gpio, uint16_t clk_pin,
+                                    GPIO_TypeDef *dat_gpio, uint16_t dat_pin);
+void     HX711_SetGain             (hx711_t *hx, uint8_t Again, uint8_t Bgain);
+void HX711_Tare(hx711_t *hx, uint8_t times, uint8_t channel);
+void     HX711_SetScale            (hx711_t *hx, float Ascale, float Bscale);
+void     HX711_TareAll             (hx711_t *hx, uint8_t times);
+
+// low-level read
+bool     HX711_IsReady             (hx711_t *hx);
+long     HX711_ReadRaw             (hx711_t *hx, uint8_t channel);
+
+// **non-blocking** getters, return true only when new data is available
+bool     HX711_GetRawNonBlocking   (hx711_t *hx, uint8_t channel, long *raw);
+bool     HX711_GetUnitsNonBlocking (hx711_t *hx, uint8_t channel, float *grams);
+
+#endif /* __HX711_H */
